@@ -81,7 +81,10 @@ int main(int argc[], char *argv[])
         //   x
         // );
 
-        write(processesStoreFile, &psInfo, sizeof(struct TailorProcessInfo));
+        if (write(processesStoreFile, &psInfo, sizeof(struct TailorProcessInfo)) < 0) {
+					perror(basename(execName));
+					exit(1);
+				};
 
         exit(0);
       } else if (pid > 0) {
@@ -105,18 +108,38 @@ int main(int argc[], char *argv[])
           }
       }
   }
-  close(processesStoreFile);
+	if (close(processesStoreFile) < 0) {
+		perror(basename(execName));
+		return(1);
+	};
 
   // shaping final results
+	int temporaryFile;
+	if ((temporaryFile = open(TEMPORARY_FILE_PATH, O_RDONLY)) < 0) {
+		perror(basename(execName));
+		return 1;
+	};
+
   FILE* resultsFile = fopen(RESULTS_FILE_PATH, "w+");
-  int temporaryFile = open(TEMPORARY_FILE_PATH, O_RDONLY);
+
+	if (resultsFile == NULL) {
+		perror(basename(execName));
+		return(1);
+	}
+
   long double* results = (long double*)calloc(N, sizeof(long double));
 
   struct TailorProcessInfo* resultsArray =
     (struct TailorProcessInfo*)malloc(sizeof(struct TailorProcessInfo) * n * N);
 
-  read(temporaryFile, resultsArray, sizeof(struct TailorProcessInfo) * n * N);
-  close(temporaryFile);
+	if (read(temporaryFile, resultsArray, sizeof(struct TailorProcessInfo) * n * N) < 0) {
+		perror(basename(execName));
+		return(1);
+	};
+	if (close(temporaryFile) < 0) {
+		perror(basename(execName));
+		return(1);
+	};
 
   for (i = 0; i < N * n; i++) {
 		// check if function value can reach INFINITY or
@@ -134,7 +157,10 @@ int main(int argc[], char *argv[])
     fprintf(resultsFile, "y[%d] = %Lf\n", i, results[i]);
   }
 
-	fclose(resultsFile);
+	if (fclose(resultsFile) == EOF) {
+		perror(basename(execName));
+		return(1);
+	};
 
   exit(0);
 }
